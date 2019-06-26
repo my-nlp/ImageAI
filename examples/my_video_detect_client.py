@@ -26,7 +26,7 @@ console = logging.StreamHandler()
 console.setLevel(logging.INFO)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
-logging.getLogger('').addHandler(console)
+logging.getLogger('VDLOG').addHandler(console)
 
 def completeScan(a1, a2, average_count):
     global parse_result
@@ -54,7 +54,7 @@ def videoDetectorInit() :
 
 def loginfo(*msg, sep='') :
     print(*msg, sep)
-    logging.info(msg)
+    logging.getLogger("VDLOG").info(msg)
 
 
 @app.route('/parseFolder', methods=['POST'])
