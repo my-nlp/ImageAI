@@ -6,6 +6,7 @@ import time
 import datetime
 import json
 from flask import Flask, Response, request
+import logging, logging.handlers
 app = Flask(__name__)
 
 execution_path = os.getcwd()
@@ -14,11 +15,23 @@ video_detector = None
 
 parse_result = {}
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+    datefmt='%a, %d %b %Y %H:%M:%S',
+    filename='myapp.log',
+    filemode='w')
+#定义一个StreamHandler，将INFO级别或更高的日志信息打印到标准错误，并将其添加到当前的日志处理对象#
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
 
 def completeScan(a1, a2, average_count):
     global parse_result
     s1 = sorted(average_count.items(), key = operator.itemgetter(1), reverse = True)
-    print("result:", dict(s1))
+    loginfo("result:", dict(s1))
     parse_result = dict(s1)
     return 0
 
@@ -32,17 +45,23 @@ def videoDetectorInit() :
         video_detector = VideoObjectDetection()
         video_detector.setModelTypeAsYOLOv3()
         video_detector.setModelPath(os.path.join(execution_path, "yolo.h5")) # Download the model via this link https://github.com/OlafenwaMoses/ImageAI/releases/tag/1.0
-        print("model startload ", datetime.datetime.now())
+        loginfo("model startload ", datetime.datetime.now())
         video_detector.loadModel(detection_speed="normal")
-        print("videoDetector init: ", video_detector)
-        print("model loaded ", datetime.datetime.now())
+        loginfo("videoDetector init: ", video_detector)
+        loginfo("model loaded ", datetime.datetime.now())
+
     return
+
+def loginfo(*msg, sep='') :
+    print(*msg, sep)
+    logging.info(msg)
+
 
 @app.route('/parseFolder', methods=['POST'])
 def parse_videoFolder() :
-    print (request.is_json)
+    loginfo ("isJson :", request.is_json)
     content = request.get_json()
-    print (content)
+    loginfo (content)
 
     if "fullpath" in content :
         video_path = content["fullpath"]
@@ -60,13 +79,14 @@ def parse_videoFolder() :
     if video_path != None :
         videoDetectorInit()
         files = [f for f in os.listdir(video_path) if os.path.isfile(os.path.join(video_path,f))]
-        print("files: ", files)
+        # print("files: ", files)
+        loginfo("files: ", files)
         for f in files:
             start = time.time()
-            print("\nstart detect ", f)
+            loginfo("start detect ", f)
             ret = video_detector.detectObjectsFromVideo(input_file_path=os.path.join(video_path, f), output_file_path='',  frames_per_second=30, frame_detection_interval=90, per_second_function=None, video_complete_function=completeScan, minimum_percentage_probability=50, return_detected_frame=False, save_detected_video=False, log_progress=False)
             end = time.time()
-            print('Finish :', f, "\ncost:", end-start)
+            loginfo('Finish :', f, "\ncost:", end-start)
             info = {"video" : f, "predict" : parse_result, "cost" : end-start}
             infos.append(info)
 
@@ -76,9 +96,9 @@ def parse_videoFolder() :
 @app.route('/parseMulti', methods=['POST'])
 # {videos : [xx.mp4, ...], video_path : "the video folder path"}
 def parse_multiVideos() :
-    print (request.is_json)
+    loginfo (request.is_json)
     content = request.get_json()
-    print (content)
+    loginfo (content)
     videos = content["videos"]
     if "video_path" in content :
         root_video_path = content["video_path"]
@@ -94,10 +114,10 @@ def parse_multiVideos() :
         if (os.path.isfile(video_path)):
             videoDetectorInit()
             start = time.time()
-            print("\nstart detect ", videoName)
+            loginfo("\nstart detect ", videoName)
             ret = video_detector.detectObjectsFromVideo(input_file_path=video_path, output_file_path='',  frames_per_second=30, frame_detection_interval=90, per_second_function=None, video_complete_function=completeScan, minimum_percentage_probability=50, return_detected_frame=False, save_detected_video=False, log_progress=False)
             end = time.time()
-            print('Finish :', videoName, "\ncost:", end-start)
+            loginfo('Finish :', videoName, "\ncost:", end-start)
             info = {"video" : videoName, "predict" : parse_result, "cost" : end-start}
             infos.append(info)
     
@@ -107,16 +127,16 @@ def parse_multiVideos() :
 @app.route('/parse/<videoName>')
 def parse_video(videoName):
     video_path = os.path.join(execution_path, 'dyvideo/', videoName)
-    print("parse video_path: ", video_path)
+    loginfo("parse video_path: ", video_path)
     if (os.path.isfile(video_path)):
         videoDetectorInit()
 
         start = time.time()
-        print("\nstart detect ", videoName)
-
+        # print("\nstart detect ", videoName)
+        loginfo("\nstart detect ", videoName)
         ret = video_detector.detectObjectsFromVideo(input_file_path=video_path, output_file_path='',  frames_per_second=30, frame_detection_interval=90, per_second_function=None, video_complete_function=completeScan, minimum_percentage_probability=50, return_detected_frame=False, save_detected_video=False, log_progress=False)
         end = time.time()
-        print('Finish :', videoName, "\ncost:", end-start)
+        loginfo('Finish :', videoName, "\ncost:", end-start)
         info = {"video" : videoName, "predict" : parse_result}
         return jsonResponse(code=0, result=info, cost=end-start)
 
