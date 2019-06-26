@@ -44,7 +44,7 @@ def videoDetectorInit() :
     if video_detector == None :
         video_detector = VideoObjectDetection()
         video_detector.setModelTypeAsYOLOv3()
-        video_detector.setModelPath(os.path.join(execution_path, "yolo.h5")) # Download the model via this link https://github.com/OlafenwaMoses/ImageAI/releases/tag/1.0
+        video_detector.setModelPath(os.path.join(execution_path, "/app/yolo.h5")) # Download the model via this link https://github.com/OlafenwaMoses/ImageAI/releases/tag/1.0
         loginfo("model startload ", datetime.datetime.now())
         video_detector.loadModel(detection_speed="normal")
         loginfo("videoDetector init: ", video_detector)
