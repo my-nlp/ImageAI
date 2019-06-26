@@ -130,4 +130,4 @@ def jsonResponse(result, code=0, cost=None) :
 
 
 if __name__ == "__main__":
-    app.run(threaded=False, debug=True)
+    app.run(threaded=False, debug=True, port=5000, host='0.0.0.0')
