@@ -15,10 +15,11 @@ RUN pip3 install numpy tensorflow scipy opencv-python pillow matplotlib h5py ker
 RUN pip3 install https://github.com/OlafenwaMoses/ImageAI/releases/download/2.0.2/imageai-2.0.2-py3-none-any.whl 
 
 COPY ./app/* /app/
-
 COPY supervisord-videoai.conf /etc/supervisor/conf.d/supervisord-videoai.conf
 
-WORKDIR /
+WORKDIR /app
+
+RUN wget https://github.com/OlafenwaMoses/ImageAI/releases/download/1.0/yolo.h5
 
 EXPOSE 5000 9191
 
