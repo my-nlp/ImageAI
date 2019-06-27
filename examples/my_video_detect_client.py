@@ -15,19 +15,24 @@ video_detector = None
 
 parse_result = {}
 
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+#     datefmt='%a, %d %b %Y %H:%M:%S',
+#     filename='myapp.log',
+#     filemode='a')
+
 v_log = logging.getLogger('VDLOG')
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-    datefmt='%a, %d %b %Y %H:%M:%S',
-    filename='myapp.log',
-    filemode='a')
-#定义一个StreamHandler，将INFO级别或更高的日志信息打印到标准错误，并将其添加到当前的日志处理对象#
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-console.setFormatter(formatter)
-v_log.addHandler(console)
+v_log.setLevel(logging.DEBUG)
+fh = logging.FileHandler(os.path.join(execution_path, "vapp.log"))
+ch = logging.StreamHandler()  
+ch.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s')
+ch.setFormatter(formatter)
+fh.setFormatter(formatter)
+v_log.addHandler(ch)
+v_log.addHandler(fh)
 
 def completeScan(a1, a2, average_count):
     global parse_result
@@ -55,7 +60,7 @@ def videoDetectorInit() :
 
 def loginfo(*msg, sep='') :
     print(*msg, sep)
-    logging.warning(msg)
+    v_log.debug(msg)
 
 
 @app.route('/parseFolder', methods=['POST'])
