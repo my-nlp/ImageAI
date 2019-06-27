@@ -6,7 +6,7 @@ import time
 import datetime
 import json
 from flask import Flask, Response, request
-import logging, logging.handlers
+import logging
 app = Flask(__name__)
 
 execution_path = os.getcwd()
@@ -15,6 +15,7 @@ video_detector = None
 
 parse_result = {}
 
+v_log = logging.getLogger('VDLOG')
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
@@ -26,7 +27,7 @@ console = logging.StreamHandler()
 console.setLevel(logging.INFO)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
-logging.getLogger('VDLOG').addHandler(console)
+v_log.addHandler(console)
 
 def completeScan(a1, a2, average_count):
     global parse_result
@@ -44,7 +45,7 @@ def videoDetectorInit() :
     if video_detector == None :
         video_detector = VideoObjectDetection()
         video_detector.setModelTypeAsYOLOv3()
-        video_detector.setModelPath(os.path.join(execution_path, "/app/yolo.h5")) # Download the model via this link https://github.com/OlafenwaMoses/ImageAI/releases/tag/1.0
+        video_detector.setModelPath(os.path.join(execution_path, "yolo.h5")) # Download the model via this link https://github.com/OlafenwaMoses/ImageAI/releases/tag/1.0
         loginfo("model startload ", datetime.datetime.now())
         video_detector.loadModel(detection_speed="normal")
         loginfo("videoDetector init: ", video_detector)
@@ -54,7 +55,7 @@ def videoDetectorInit() :
 
 def loginfo(*msg, sep='') :
     print(*msg, sep)
-    logging.getLogger("VDLOG").info(msg)
+    logging.warning(msg)
 
 
 @app.route('/parseFolder', methods=['POST'])
