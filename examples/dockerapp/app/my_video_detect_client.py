@@ -9,10 +9,19 @@ from flask import Flask, Response, request
 import logging
 import threading
 import urllib.request
+import sqlite3
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
 execution_path = os.getcwd()
+
+DATABASE = os.path.join(execution_path, 'detect.db')
+dburi = 'sqlite:////{:}'.format(DATABASE)
+print("dburi: ", dburi)
+app.config['SQLALCHEMY_DATABASE_URI'] = dburi
+
+db = SQLAlchemy(app)
 
 video_detector = None
 
@@ -36,6 +45,16 @@ ch.setFormatter(formatter)
 fh.setFormatter(formatter)
 v_log.addHandler(ch)
 v_log.addHandler(fh)
+
+class VideoInfo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.Text, unique=True, nullable=False)
+    detectInfo = db.Column(db.String(256), unique=False, nullable=True)
+
+    def __repr__(self):
+        return '<url %r>' % self.url
+
+db.create_all()
 
 def completeScan(a1, a2, average_count):
     showThreadInfo("CS")
@@ -112,6 +131,10 @@ def parseVideoUrl():
     loginfo(content)
     if "videolink" in content :
         link = content["videolink"]
+        vinfo = VideoInfo.query.filter_by(url=link).first()
+        if vinfo != None:    
+            info = {"video" : link, "predict" : json.loads(vinfo.detectInfo)}
+            return jsonResponse(code=0, result=info, cost=0)
         site = urllib.request.urlopen(url=link)
         meta = site.info()
         loginfo("meta: ", meta)
@@ -161,9 +184,12 @@ def parseVideoUrl():
                 ret = video_detector.detectObjectsFromVideo(input_file_path=video_path, output_file_path='',  frames_per_second=30, frame_detection_interval=90, per_second_function=None, video_complete_function=completeScan, minimum_percentage_probability=50, return_detected_frame=False, save_detected_video=False, log_progress=False)
                 end = time.time()
                 loginfo('Finish :', filename, "\ncost:", end-start)
-                info = {"video" : filename, "predict" : parse_result}
+                info = {"video" : link, "predict" : parse_result}
                 # remove video if need
                 os.remove(video_path)
+                vinfo = VideoInfo(url=link, detectInfo=json.dumps(parse_result))
+                db.session.add(vinfo)
+                db.session.commit()
                 return jsonResponse(code=0, result=info, cost=end-start)
 
 

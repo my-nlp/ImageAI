@@ -11,7 +11,7 @@ RUN apt-get update \
         unzip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install numpy tensorflow scipy opencv-python pillow matplotlib h5py keras flask
+RUN pip3 install numpy tensorflow scipy opencv-python pillow matplotlib h5py keras flask Flask-SQLAlchemy
 RUN pip3 install https://github.com/OlafenwaMoses/ImageAI/releases/download/2.0.2/imageai-2.0.2-py3-none-any.whl 
 
 COPY ./app/* /app/
