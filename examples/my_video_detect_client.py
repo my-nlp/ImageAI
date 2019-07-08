@@ -10,17 +10,6 @@ import urllib.request
 from flask import Flask, Response, request
 from my_client_db import app, db, execution_path, VideoInfo, v_log
 
-# app = Flask(__name__)
-
-# execution_path = os.getcwd()
-
-# DATABASE = os.path.join(execution_path, 'detect.db')
-# dburi = 'sqlite:////{:}'.format(DATABASE)
-# print("dburi: ", dburi)
-# app.config['SQLALCHEMY_DATABASE_URI'] = dburi
-
-# db = SQLAlchemy(app)
-
 video_detector = None
 
 parse_result = {}
@@ -94,6 +83,82 @@ def parse_videoFolder() :
 
     return jsonResponse(result=infos, cost=time.time()-totalstart)
 
+@app.route('/parseVideoUrls', methods=['POST'])
+# {'video_urls' : [xxx,xxx]}
+def parseVideoUrls():
+    loginfo (request.is_json)
+    content = request.get_json()
+    loginfo(content)
+    vinfos = []
+    startA = time.time()
+    if "video_urls" in content :
+        links = content["video_urls"]
+        for link in links:
+            vinfo = VideoInfo.query.filter_by(url=link).first()
+            if vinfo != None :
+                info = {"video" : link, "predict" : json.loads(vinfo.detectInfo)}
+                vinfos.append(info)
+            else :
+                loginfo("Download: ", link)
+                site = urllib.request.urlopen(url=link)
+                meta = site.info()
+                loginfo("meta: ", meta)
+                file_size = meta.get("Content-Length")
+                ts = time.strftime("%Y-%m-%d-%H.%M.%S", time.localtime())
+                if float(file_size) > 20*1024*1024 :
+                    loginfo("video size is {} large than 20M, ignore".format(file_size))
+                    continue
+                
+                filename="download_{}.mp4".format(ts)
+                video_path = os.path.join(execution_path, 'DVideos/')
+                if not os.path.isdir(video_path) :
+                    os.mkdir(video_path)
+                video_path = os.path.join(video_path, filename)
+                f = open(video_path, "wb")
+
+                file_size_dl = 0
+                block_sz = 8192
+                while True:
+                    buffer = site.read(block_sz)
+                    if not buffer:
+                        break
+
+                    file_size_dl += len(buffer)
+                    f.write(buffer)
+                    status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / float(file_size))
+                    status = status + chr(8)*(len(status)+1)
+                    print(status)
+
+                f.close()
+                site.close()
+                if file_size_dl == float(file_size) :
+                    # return jsonResponse(result={"len" : file_size, "file_name":filename})
+                    # video_path = os.path.join(execution_path, filename)
+                    loginfo("parse video_path: ", video_path)
+                    if (os.path.isfile(video_path)):
+                        videoDetectorInit()
+
+                        start = time.time()
+                        # print("\nstart detect ", videoName)
+                        loginfo("\nstart detect ", filename)
+                        ret = video_detector.detectObjectsFromVideo(input_file_path=video_path, output_file_path='',  frames_per_second=30, frame_detection_interval=90, per_second_function=None, video_complete_function=completeScan, minimum_percentage_probability=50, return_detected_frame=False, save_detected_video=False, log_progress=False)
+                        end = time.time()
+                        loginfo('Finish :', filename, "\ncost:", end-start)
+                        info = {"video" : link, "predict" : parse_result}
+                        # remove video if need
+                        os.remove(video_path)
+                        vinfo = VideoInfo(url=link, detectInfo=json.dumps(parse_result))
+                        db.session.add(vinfo)
+                        db.session.commit()
+                        vinfos.append(info)
+                        # return jsonResponse(code=0, result=info, cost=end-start)
+        
+        endA = time.time()
+        return jsonResponse(result=vinfos, cost=endA-startA)
+
+    return jsonResponse(result="no urls provide")
+
+
 @app.route('/parseVideoUrl', methods=['POST'])
 # {"videolink" : xxx}
 def parseVideoUrl():
@@ -111,8 +176,8 @@ def parseVideoUrl():
         loginfo("meta: ", meta)
         file_size = meta.get("Content-Length")
         ts = time.strftime("%Y-%m-%d-%H.%M.%S", time.localtime())
-        if float(file_size) > 10*1024*1024 :
-            return jsonResponse(code=-1, result="video size is {} large than 10M".format(file_size))
+        if float(file_size) > 20*1024*1024 :
+            return jsonResponse(code=-1, result="video size is {} large than 20M".format(file_size))
 
         filename="download_{}.mp4".format(ts)
         # file_name, headers = urllib.request.urlretrieve(url=link, filename="download_{}.mp4".format(ts))
